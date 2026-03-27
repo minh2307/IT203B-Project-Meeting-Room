@@ -83,7 +83,8 @@ public class AuthMenu {
             AdminMenu adminMenu = new AdminMenu();
             adminMenu.showAdminMenu();
         } else if ("employee".equalsIgnoreCase(user.getRole())) {
-            System.out.println("menu employee se lam o ngay sau");
+            EmployeeMenu employeeMenu = new EmployeeMenu(user);
+            employeeMenu.showEmployeeMenu();
         } else if ("support".equalsIgnoreCase(user.getRole())) {
             System.out.println("menu support se lam o ngay sau");
         } else {
