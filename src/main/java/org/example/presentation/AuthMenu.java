@@ -5,6 +5,8 @@ import org.example.service.impl.Authservice;
 import org.example.service.interfaces.IAuthservice;
 
 import java.util.Scanner;
+import java.io.IOException;
+import java.io.Console;
 
 public class AuthMenu {
     private final Scanner scanner = new Scanner(System.in);
@@ -37,6 +39,7 @@ public class AuthMenu {
     }
 
     private void registerEmployee() {
+        System.out.println("\n====Dang ky emloyee ====");
         System.out.print("nhap username: ");
         String username = scanner.nextLine();
 
@@ -49,8 +52,8 @@ public class AuthMenu {
         System.out.print("nhap so dien thoai: ");
         String phone = scanner.nextLine();
 
-        System.out.print("nhap mat khau: ");
-        String password = scanner.nextLine();
+        String password = readPasswordWithMask("nhap mat khau: ");
+
 
         boolean result = authservice.registerEmployee(username, fullName, email, phone, password);
 
@@ -62,11 +65,11 @@ public class AuthMenu {
     }
 
     private void login() {
+        System.out.println("\n===== dang nhap =====");
         System.out.print("nhap username: ");
         String username = scanner.nextLine();
 
-        System.out.print("nhap mat khau: ");
-        String password = scanner.nextLine();
+        String password = readPasswordWithMask("nhap mat khau: ");
 
         User user = authservice.login(username, password);
 
@@ -90,5 +93,56 @@ public class AuthMenu {
         } else {
             System.out.println("vai tro khong hop le");
         }
+    }
+
+    private String readPasswordWithMask(String message) {
+        System.out.print(message);
+        StringBuilder password = new StringBuilder();
+
+        try {
+            while (true) {
+                int ch = System.in.read();
+
+                if (ch == -1 || ch == '\n') {
+                    break;
+                }
+
+                if (ch == '\r') {
+                    int next = System.in.read();
+                    if (next != '\n' && next != -1) {
+                        // bo qua
+                    }
+                    break;
+                }
+
+                if (ch == 8 || ch == 127) {
+                    if (password.length() > 0) {
+                        password.deleteCharAt(password.length() - 1);
+                        System.out.print("\b \b");
+                    }
+                } else {
+                    password.append((char) ch);
+                    System.out.print("*");
+                }
+            }
+        } catch (IOException e) {
+            return scanner.nextLine();
+        }
+
+        System.out.println();
+        return password.toString();
+    }
+
+    private String readPasswordHidden(String message) {
+        Console console = System.console();
+
+        if (console == null) {
+            System.out.println("khong tim thay system console");
+            System.out.println("hay chay bang Terminal, cmd hoac PowerShell");
+            return "";
+        }
+
+        char[] passwordChars = console.readPassword(message);
+        return passwordChars == null ? "" : new String(passwordChars);
     }
 }

@@ -4,6 +4,7 @@ import org.example.model.Booking;
 import org.example.model.Equipment;
 import org.example.model.Room;
 import org.example.model.User;
+import org.example.service.impl.Authservice;
 import org.example.service.impl.Bookingservice;
 import org.example.service.impl.Equipmentservice;
 
@@ -21,6 +22,7 @@ public class EmployeeMenu {
     private final Bookingservice bookingservice = Bookingservice.getInstance();
     private final Equipmentservice equipmentservice = Equipmentservice.getInstance();
     private final User currentUser;
+    private final Authservice authservice = Authservice.getInstance();
 
     public EmployeeMenu(User currentUser) {
         this.currentUser = currentUser;
@@ -32,6 +34,8 @@ public class EmployeeMenu {
             System.out.println("1. xem phong trong theo thoi gian");
             System.out.println("2. dat phong hop");
             System.out.println("3. xem danh sach booking cua toi");
+            System.out.println("4. xem ho so ca nhan");
+            System.out.println("5. cap nhat ho so ca nhan");
             System.out.println("0. dang xuat");
             System.out.print("chon: ");
 
@@ -47,6 +51,12 @@ public class EmployeeMenu {
                 case "3":
                     viewMyBookings();
                     break;
+                case "4":
+                    viewMyProfile();
+                    break;
+                case "5":
+                    updateMyProfile();
+                    break;
                 case "0":
                     System.out.println("dang xuat employee");
                     return;
@@ -55,7 +65,6 @@ public class EmployeeMenu {
             }
         }
     }
-
     private void viewAvailableRooms() {
         try {
             Timestamp startTime = inputTimestamp("nhap thoi gian bat dau");
@@ -231,5 +240,69 @@ public class EmployeeMenu {
         return timestamp.toInstant()
                 .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
+
+    private void viewMyProfile() {
+        User profile = authservice.getUserProfile(currentUser.getUserId());
+
+        if (profile == null) {
+            System.out.println("khong lay duoc ho so ca nhan");
+            return;
+        }
+
+        System.out.println("\n===== ho so ca nhan =====");
+//        System.out.println("id: " + profile.getUserId());
+        System.out.println("username: " + profile.getUsername());
+        System.out.println("ho ten: " + profile.getFullName());
+        System.out.println("email: " + (profile.getEmail() == null ? "" : profile.getEmail()));
+        System.out.println("so dien thoai: " + (profile.getPhone() == null ? "" : profile.getPhone()));
+//        System.out.println("vai tro: " + profile.getRole());
+        System.out.println("trang thai: " + profile.getStatus());
+    }
+
+    private void updateMyProfile() {
+        User profile = authservice.getUserProfile(currentUser.getUserId());
+
+        if (profile == null) {
+            System.out.println("khong tim thay ho so de cap nhat");
+            return;
+        }
+
+        System.out.println("\n===== cap nhat ho so ca nhan =====");
+        System.out.println("de trong neu muon giu nguyen gia tri cu");
+
+        System.out.print("ho ten moi (hien tai: " + safe(profile.getFullName()) + "): ");
+        String fullName = scanner.nextLine();
+
+        System.out.print("email moi (hien tai: " + safe(profile.getEmail()) + "): ");
+        String email = scanner.nextLine();
+
+        System.out.print("so dien thoai moi (hien tai: " + safe(profile.getPhone()) + "): ");
+        String phone = scanner.nextLine();
+
+        if (fullName.trim().isEmpty()) {
+            fullName = profile.getFullName();
+        }
+        if (email.trim().isEmpty()) {
+            email = profile.getEmail();
+        }
+        if (phone.trim().isEmpty()) {
+            phone = profile.getPhone();
+        }
+
+        boolean result = authservice.updateUserProfile(currentUser.getUserId(), fullName, email, phone);
+
+        if (result) {
+            currentUser.setFullName(fullName);
+            currentUser.setEmail(email);
+            currentUser.setPhone(phone);
+            System.out.println("cap nhat ho so thanh cong");
+        } else {
+            System.out.println("cap nhat ho so that bai");
+        }
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 }
