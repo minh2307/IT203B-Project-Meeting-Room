@@ -139,7 +139,7 @@ public class Roomdao implements IRoomdao {
         return rooms;
     }
 
-    private Room mapRoom(ResultSet rs) throws Exception {
+    public Room mapRoom(ResultSet rs) throws Exception {
         return new Room(
                 rs.getInt("room_id"),
                 rs.getString("room_name"),
@@ -150,5 +150,72 @@ public class Roomdao implements IRoomdao {
                 rs.getTimestamp("created_at"),
                 rs.getTimestamp("updated_at")
         );
+    }
+
+    @Override
+    public Room findByName(String roomName) {
+        String sql = "select * from rooms where lower(trim(room_name)) = lower(trim(?)) limit 1";
+
+        try (Connection conn = JDBCConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, roomName);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRoom(rs);
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("loi findByName Room: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    @Override
+    public List<Room> searchByName(String keyword) {
+        List<Room> rooms = new ArrayList<>();
+        String sql = "select * from rooms where lower(room_name) like lower(?) order by room_id";
+
+        try (Connection conn = JDBCConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, "%" + keyword.trim() + "%");
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rooms.add(mapRoom(rs));
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("loi searchByName: " + e.getMessage());
+        }
+
+        return rooms;
+    }
+
+    @Override
+    public boolean hasRelatedBookings(int roomId) {
+        String sql = "select count(*) from bookings where room_id = ?";
+
+        try (Connection conn = JDBCConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, roomId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("loi hasRelatedBookings: " + e.getMessage());
+        }
+
+        return false;
     }
 }

@@ -14,4 +14,10 @@ public interface IRoomdao {
     Room findById(int roomId);
 
     List<Room> getAllRooms();
+
+    Room findByName(String roomName);
+
+    List<Room> searchByName(String keyword);
+
+    boolean hasRelatedBookings(int roomId);
 }

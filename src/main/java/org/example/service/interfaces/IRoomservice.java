@@ -14,4 +14,7 @@ public interface IRoomservice {
     Room findById(int roomId);
 
     List<Room> getAllRooms();
+
+    List<Room> searchRoomsByName(String keyword);
+
 }

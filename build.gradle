@@ -25,3 +25,7 @@ test {
 application {
     mainClass = 'org.example.presentation.Main'
 }
+
+run {
+    standardInput = System.in
+}

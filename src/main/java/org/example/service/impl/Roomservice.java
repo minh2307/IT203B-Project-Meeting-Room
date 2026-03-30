@@ -33,6 +33,12 @@ public class Roomservice implements IRoomservice {
             return false;
         }
 
+        Room duplicateRoom = roomdao.findByName(roomName.trim());
+        if (duplicateRoom != null) {
+            System.out.println("ten phong da ton tai");
+            return false;
+        }
+
         if (location == null || location.trim().isEmpty()) {
             location = "chua cap nhat";
         }
@@ -41,8 +47,10 @@ public class Roomservice implements IRoomservice {
             description = "";
         }
 
-        if (status == null || status.trim().isEmpty()) {
-            status = "available";
+        status = normalizeStatus(status);
+        if (!isValidStatus(status)) {
+            System.out.println("trang thai phong khong hop le");
+            return false;
         }
 
         Room room = new Room(
@@ -50,7 +58,7 @@ public class Roomservice implements IRoomservice {
                 capacity,
                 location.trim(),
                 description.trim(),
-                status.trim()
+                status
         );
 
         return roomdao.addRoom(room);
@@ -79,6 +87,12 @@ public class Roomservice implements IRoomservice {
             return false;
         }
 
+        Room duplicateRoom = roomdao.findByName(roomName.trim());
+        if (duplicateRoom != null && duplicateRoom.getRoomId() != roomId) {
+            System.out.println("ten phong da ton tai");
+            return false;
+        }
+
         if (location == null || location.trim().isEmpty()) {
             location = "chua cap nhat";
         }
@@ -87,8 +101,10 @@ public class Roomservice implements IRoomservice {
             description = "";
         }
 
-        if (status == null || status.trim().isEmpty()) {
-            status = "available";
+        status = normalizeStatus(status);
+        if (!isValidStatus(status)) {
+            System.out.println("trang thai phong khong hop le");
+            return false;
         }
 
         Room room = new Room(
@@ -97,8 +113,8 @@ public class Roomservice implements IRoomservice {
                 capacity,
                 location.trim(),
                 description.trim(),
-                status.trim(),
-                null,
+                status,
+                existingRoom.getCreatedAt(),
                 null
         );
 
@@ -118,6 +134,11 @@ public class Roomservice implements IRoomservice {
             return false;
         }
 
+        if (roomdao.hasRelatedBookings(roomId)) {
+            System.out.println("khong the xoa phong vi phong da co du lieu booking lien quan");
+            return false;
+        }
+
         return roomdao.deleteRoom(roomId);
     }
 
@@ -134,5 +155,27 @@ public class Roomservice implements IRoomservice {
     @Override
     public List<Room> getAllRooms() {
         return roomdao.getAllRooms();
+    }
+
+    @Override
+    public List<Room> searchRoomsByName(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return roomdao.getAllRooms();
+        }
+
+        return roomdao.searchByName(keyword.trim());
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.trim().isEmpty()) {
+            return "available";
+        }
+        return status.trim().toLowerCase();
+    }
+
+    private boolean isValidStatus(String status) {
+        return "available".equalsIgnoreCase(status)
+                || "maintenance".equalsIgnoreCase(status)
+                || "unavailable".equalsIgnoreCase(status);
     }
 }
