@@ -33,7 +33,6 @@ public class Bookingservice implements IBookingservice {
         return instance;
     }
 
-
     public Timestamp getCurrentVietnamTime() {
         return Timestamp.from(
                 java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toInstant()
@@ -74,7 +73,8 @@ public class Bookingservice implements IBookingservice {
                                  Timestamp startTime,
                                  Timestamp endTime,
                                  String note,
-                                 Map<Integer, Integer> equipmentRequests) {
+                                 Map<Integer, Integer> equipmentRequests,
+                                 Map<Integer, Integer> serviceRequests) {
 
         if (userId <= 0) {
             System.out.println("user id khong hop le");
@@ -115,6 +115,10 @@ public class Bookingservice implements IBookingservice {
 
         if (equipmentRequests == null) {
             equipmentRequests = Collections.emptyMap();
+        }
+
+        if (serviceRequests == null) {
+            serviceRequests = Collections.emptyMap();
         }
 
         Connection conn = null;
@@ -166,6 +170,24 @@ public class Bookingservice implements IBookingservice {
                 }
             }
 
+            for (Map.Entry<Integer, Integer> entry : serviceRequests.entrySet()) {
+                int serviceId = entry.getKey();
+                int quantity = entry.getValue();
+
+                if (serviceId <= 0 || quantity <= 0) {
+                    System.out.println("du lieu dich vu khong hop le");
+                    conn.rollback();
+                    return false;
+                }
+
+                BigDecimal unitPrice = bookingdetaildao.getServiceUnitPrice(conn, serviceId);
+                if (unitPrice == null) {
+                    System.out.println("dich vu id " + serviceId + " khong ton tai hoac khong hoat dong");
+                    conn.rollback();
+                    return false;
+                }
+            }
+
             Booking booking = new Booking(
                     userId,
                     roomId,
@@ -198,7 +220,28 @@ public class Bookingservice implements IBookingservice {
 
                 boolean added = bookingdetaildao.addBookingDetail(conn, detail);
                 if (!added) {
-                    System.out.println("tao booking detail that bai");
+                    System.out.println("tao booking detail thiet bi that bai");
+                    conn.rollback();
+                    return false;
+                }
+            }
+
+            for (Map.Entry<Integer, Integer> entry : serviceRequests.entrySet()) {
+                BigDecimal unitPrice = bookingdetaildao.getServiceUnitPrice(conn, entry.getKey());
+
+                Bookingdetail detail = new Bookingdetail(
+                        bookingId,
+                        null,
+                        entry.getKey(),
+                        entry.getValue(),
+                        unitPrice,
+                        "service",
+                        "yeu cau dich vu"
+                );
+
+                boolean added = bookingdetaildao.addBookingDetail(conn, detail);
+                if (!added) {
+                    System.out.println("tao booking detail dich vu that bai");
                     conn.rollback();
                     return false;
                 }
@@ -236,5 +279,23 @@ public class Bookingservice implements IBookingservice {
             return Collections.emptyList();
         }
         return bookingdao.getBookingsByUser(userId);
+    }
+
+    public boolean cancelPendingBooking(int userId, int bookingId) {
+        if (userId <= 0) {
+            System.out.println("user id khong hop le");
+            return false;
+        }
+
+        if (bookingId <= 0) {
+            System.out.println("booking id khong hop le");
+            return false;
+        }
+
+        boolean result = bookingdao.cancelPendingBooking(bookingId, userId);
+        if (!result) {
+            System.out.println("chi duoc huy booking cua chinh ban khi dang o trang thai pending");
+        }
+        return result;
     }
 }

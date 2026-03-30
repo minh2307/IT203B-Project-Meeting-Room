@@ -3,6 +3,7 @@ package org.example.dao.impl;
 import org.example.dao.interfaces.IBookingdetaildao;
 import org.example.model.Bookingdetail;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -44,6 +45,30 @@ public class Bookingdetaildao implements IBookingdetaildao {
         }
 
         return false;
+    }
+
+    public BigDecimal getServiceUnitPrice(Connection conn, int serviceId) {
+        String sql = "select unit_price, status from services where service_id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, serviceId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String status = rs.getString("status");
+
+                    if (!"active".equalsIgnoreCase(status)) {
+                        return null;
+                    }
+
+                    return rs.getBigDecimal("unit_price");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi getServiceUnitPrice: " + e.getMessage());
+        }
+
+        return null;
     }
 
     @Override

@@ -20,7 +20,10 @@ public interface IBookingservice {
                           Timestamp startTime,
                           Timestamp endTime,
                           String note,
-                          Map<Integer, Integer> equipmentRequests);
+                          Map<Integer, Integer> equipmentRequests,
+                          Map<Integer, Integer> serviceRequests);
 
     List<Booking> getBookingsByUser(int userId);
+
+    boolean cancelPendingBooking(int userId, int bookingId);
 }

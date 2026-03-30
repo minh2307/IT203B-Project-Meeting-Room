@@ -139,7 +139,7 @@ public class Bookingdao implements IBookingdao {
 
     public List<Booking> getBookingsByUser(int userId) {
         List<Booking> bookings = new ArrayList<>();
-        String sql = "select * from bookings where user_id = ? order by booking_id desc";
+        String sql = "select * from bookings where user_id = ? order by start_time desc, booking_id desc";
 
         try (Connection conn = JDBCConnection.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -156,6 +156,24 @@ public class Bookingdao implements IBookingdao {
         }
 
         return bookings;
+    }
+
+    public boolean cancelPendingBooking(int bookingId, int userId) {
+        String sql = "update bookings set booking_status = 'cancelled', updated_at = current_timestamp " +
+                "where booking_id = ? and user_id = ? and booking_status = 'pending'";
+
+        try (Connection conn = JDBCConnection.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, bookingId);
+            ps.setInt(2, userId);
+
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.out.println("loi cancelPendingBooking: " + e.getMessage());
+        }
+
+        return false;
     }
 
     private Booking mapBooking(ResultSet rs) throws Exception {
