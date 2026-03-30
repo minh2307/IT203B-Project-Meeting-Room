@@ -1,10 +1,6 @@
 package org.example.presentation;
 
-import org.example.model.Booking;
-import org.example.model.Equipment;
-import org.example.model.Room;
-import org.example.model.Service;
-import org.example.model.User;
+import org.example.model.*;
 import org.example.service.impl.Adminservice;
 import org.example.service.impl.Bookingservice;
 import org.example.service.impl.Equipmentservice;
@@ -17,6 +13,7 @@ import org.example.service.interfaces.IServiceservice;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -38,6 +35,7 @@ public class AdminMenu {
             System.out.println("3. quan ly dich vu di kem");
             System.out.println("4. tao tai khoan support");
             System.out.println("5. duyet booking va phan cong support");
+            System.out.println("6. bao cao chi phi va thong ke");
             System.out.println("0. dang xuat");
             System.out.print("chon: ");
 
@@ -58,6 +56,9 @@ public class AdminMenu {
                     break;
                 case "5":
                     showBookingApprovalMenu();
+                    break;
+                case "6":
+                    showReportMenu();
                     break;
                 case "0":
                     System.out.println("dang xuat admin");
@@ -203,6 +204,51 @@ public class AdminMenu {
                     break;
                 case "6":
                     assignSupportStaff();
+                    break;
+                case "0":
+                    return;
+                default:
+                    System.out.println("lua chon khong hop le");
+            }
+        }
+    }
+
+    private void showReportMenu() {
+        while (true) {
+            System.out.println("\n===== bao cao chi phi va thong ke =====");
+            System.out.println("1. xem chi phi dich vu theo booking");
+            System.out.println("2. doanh thu dich vu theo ngay");
+            System.out.println("3. doanh thu dich vu theo thang");
+            System.out.println("4. thong ke booking theo trang thai");
+            System.out.println("5. thong ke tong booking theo thang");
+            System.out.println("6. top phong hop duoc su dung");
+            System.out.println("7. top dich vu duoc su dung");
+            System.out.println("0. quay lai");
+            System.out.print("chon: ");
+
+            String choice = scanner.nextLine();
+
+            switch (choice) {
+                case "1":
+                    viewBookingServiceCost();
+                    break;
+                case "2":
+                    viewServiceRevenueByDate();
+                    break;
+                case "3":
+                    viewServiceRevenueByMonth();
+                    break;
+                case "4":
+                    viewBookingStatusStatistics();
+                    break;
+                case "5":
+                    viewMonthlyBookingStatistics();
+                    break;
+                case "6":
+                    viewTopUsedRooms();
+                    break;
+                case "7":
+                    viewTopUsedServices();
                     break;
                 case "0":
                     return;
@@ -696,6 +742,106 @@ public class AdminMenu {
         }
     }
 
+    private void viewServiceRevenueByDate() {
+        try {
+            System.out.print("nhap ngay can thong ke (dd/MM/yyyy): ");
+            String input = scanner.nextLine().trim();
+            LocalDate date = LocalDate.parse(input, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+            BigDecimal revenue = bookingservice.getServiceRevenueByDate(date);
+            System.out.println("doanh thu dich vu ngay " + input + " = " + revenue.toPlainString());
+        } catch (Exception e) {
+            System.out.println("ngay nhap vao khong hop le");
+        }
+    }
+
+    private void viewServiceRevenueByMonth() {
+        try {
+            System.out.print("nhap thang: ");
+            int month = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("nhap nam: ");
+            int year = Integer.parseInt(scanner.nextLine());
+
+            BigDecimal revenue = bookingservice.getServiceRevenueByMonth(year, month);
+            System.out.println("doanh thu dich vu thang " + month + "/" + year + " = " + revenue.toPlainString());
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void viewBookingStatusStatistics() {
+        int pending = bookingservice.countBookingsByStatus("pending");
+        int approved = bookingservice.countBookingsByStatus("approved");
+        int rejected = bookingservice.countBookingsByStatus("rejected");
+        int cancelled = bookingservice.countBookingsByStatus("cancelled");
+
+        System.out.println("\n===== thong ke booking theo trang thai =====");
+        System.out.println("pending   : " + pending);
+        System.out.println("approved  : " + approved);
+        System.out.println("rejected  : " + rejected);
+        System.out.println("cancelled : " + cancelled);
+    }
+
+    private void viewMonthlyBookingStatistics() {
+        try {
+            System.out.print("nhap thang: ");
+            int month = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("nhap nam: ");
+            int year = Integer.parseInt(scanner.nextLine());
+
+            int total = bookingservice.countBookingsInMonth(year, month);
+            System.out.println("tong so booking trong thang " + month + "/" + year + " = " + total);
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void viewTopUsedRooms() {
+        try {
+            System.out.print("nhap so luong top phong muon xem: ");
+            int limit = Integer.parseInt(scanner.nextLine());
+
+            List<String> reports = bookingservice.getTopUsedRooms(limit);
+            if (reports == null || reports.isEmpty()) {
+                System.out.println("khong co du lieu thong ke phong");
+                return;
+            }
+
+            System.out.println("\n===== top phong hop duoc su dung =====");
+            int index = 1;
+            for (String report : reports) {
+                System.out.println(index + ". " + report);
+                index++;
+            }
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void viewTopUsedServices() {
+        try {
+            System.out.print("nhap so luong top dich vu muon xem: ");
+            int limit = Integer.parseInt(scanner.nextLine());
+
+            List<String> reports = bookingservice.getTopUsedServices(limit);
+            if (reports == null || reports.isEmpty()) {
+                System.out.println("khong co du lieu thong ke dich vu");
+                return;
+            }
+
+            System.out.println("\n===== top dich vu duoc su dung =====");
+            int index = 1;
+            for (String report : reports) {
+                System.out.println(index + ". " + report);
+                index++;
+            }
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
     private void printRoomTable(List<Room> rooms) {
         String line = "+----+------------------------------+----------+----------------------+------------------------------+------------------+";
         System.out.println(line);
@@ -810,4 +956,49 @@ public class AdminMenu {
             );
         }
     }
+
+    private void viewBookingServiceCost() {
+        try {
+            viewAllBookings();
+            System.out.print("nhap booking id can xem chi phi dich vu: ");
+            int bookingId = Integer.parseInt(scanner.nextLine());
+
+            List<BookingServiceCostItem> items = bookingservice.getBookingServiceCostDetails(bookingId);
+            BigDecimal totalCost = bookingservice.getBookingServiceCost(bookingId);
+
+            if (items == null || items.isEmpty()) {
+                System.out.println("booking nay khong co dich vu di kem");
+                System.out.println("tong chi phi dich vu = 0");
+                return;
+            }
+
+            System.out.println("\n===== chi tiet chi phi dich vu cua booking " + bookingId + " =====");
+            printBookingServiceCostTable(items);
+            System.out.println("tong chi phi dich vu = " + totalCost.toPlainString() + " vnd");
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void printBookingServiceCostTable(List<BookingServiceCostItem> items) {
+        String line = "+----+------------------------------+------------+----------+--------------+--------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-28s | %-10s | %-8s | %-12s | %-12s |%n",
+                "id", "ten dich vu", "don vi", "so luong", "don gia", "thanh tien");
+        System.out.println(line);
+
+        for (BookingServiceCostItem item : items) {
+            System.out.printf("| %-2d | %-28s | %-10s | %-8d | %-12s | %-12s |%n",
+                    item.getServiceId(),
+                    safeText(item.getServiceName(), 28),
+                    safeText(item.getUnit(), 10),
+                    item.getQuantity(),
+                    item.getUnitPrice() == null ? "0" : item.getUnitPrice().toPlainString(),
+                    item.getLineTotal() == null ? "0" : item.getLineTotal().toPlainString());
+        }
+
+        System.out.println(line);
+    }
+
+
 }

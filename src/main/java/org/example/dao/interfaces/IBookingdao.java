@@ -36,4 +36,10 @@ public interface IBookingdao {
     boolean cancelPendingBooking(int bookingId, int userId);
 
     List<Booking> getAllBookings();
+
+    int countBookingsByStatus(String bookingStatus);
+
+    int countBookingsInMonth(int year, int month);
+
+    List<String> getTopUsedRooms(int limit);
 }

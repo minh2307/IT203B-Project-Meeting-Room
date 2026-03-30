@@ -128,6 +128,7 @@ public class Bookingdao implements IBookingdao {
         return -1;
     }
 
+    @Override
     public Room findRoomById(Connection conn, int roomId) {
         String sql = "select * from rooms where room_id = ?";
 
@@ -146,6 +147,7 @@ public class Bookingdao implements IBookingdao {
         return null;
     }
 
+    @Override
     public Booking findBookingById(int bookingId) {
         String sql = "select * from bookings where booking_id = ?";
 
@@ -166,6 +168,7 @@ public class Bookingdao implements IBookingdao {
         return null;
     }
 
+    @Override
     public List<Booking> getPendingBookings() {
         List<Booking> bookings = new ArrayList<>();
         String sql = "select * from bookings where booking_status = 'pending' order by start_time asc, booking_id asc";
@@ -184,6 +187,7 @@ public class Bookingdao implements IBookingdao {
         return bookings;
     }
 
+    @Override
     public boolean hasApprovedConflict(Connection conn, int bookingId, int roomId, Timestamp startTime, Timestamp endTime) {
         String sql = "select count(*) from bookings " +
                 "where booking_id <> ? " +
@@ -210,6 +214,7 @@ public class Bookingdao implements IBookingdao {
         return true;
     }
 
+    @Override
     public boolean updateBookingStatus(Connection conn, int bookingId, String bookingStatus, String noteAppend) {
         String sql = "update bookings " +
                 "set booking_status = ?, " +
@@ -237,6 +242,7 @@ public class Bookingdao implements IBookingdao {
         return false;
     }
 
+    @Override
     public boolean assignSupportStaff(int bookingId, int supportStaffId) {
         String sql = "update bookings set assigned_support_id = ?, " +
                 "preparation_status = coalesce(preparation_status, 'preparing'), " +
@@ -256,6 +262,7 @@ public class Bookingdao implements IBookingdao {
         return false;
     }
 
+    @Override
     public List<Booking> getAssignedBookingsBySupport(int supportStaffId, Date workDate) {
         List<Booking> bookings = new ArrayList<>();
         String sql = "select * from bookings " +
@@ -283,6 +290,7 @@ public class Bookingdao implements IBookingdao {
         return bookings;
     }
 
+    @Override
     public boolean updatePreparationStatus(int bookingId, int supportStaffId, String preparationStatus) {
         String sql = "update bookings set preparation_status = ?, updated_at = current_timestamp " +
                 "where booking_id = ? and assigned_support_id = ? and booking_status = 'approved'";
@@ -302,6 +310,7 @@ public class Bookingdao implements IBookingdao {
         return false;
     }
 
+    @Override
     public List<Booking> getBookingsByUser(int userId) {
         List<Booking> bookings = new ArrayList<>();
         String sql = "select * from bookings where user_id = ? order by start_time desc, booking_id desc";
@@ -323,6 +332,7 @@ public class Bookingdao implements IBookingdao {
         return bookings;
     }
 
+    @Override
     public boolean cancelPendingBooking(int bookingId, int userId) {
         String sql = "update bookings set booking_status = 'cancelled', updated_at = current_timestamp " +
                 "where booking_id = ? and user_id = ? and booking_status = 'pending'";
@@ -339,6 +349,82 @@ public class Bookingdao implements IBookingdao {
         }
 
         return false;
+    }
+
+    @Override
+    public int countBookingsByStatus(String bookingStatus) {
+        String sql = "select count(*) from bookings where booking_status = ?";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, bookingStatus);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi countBookingsByStatus: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
+    @Override
+    public int countBookingsInMonth(int year, int month) {
+        String sql = "select count(*) from bookings where year(start_time) = ? and month(start_time) = ?";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, year);
+            ps.setInt(2, month);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi countBookingsInMonth: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
+    @Override
+    public List<String> getTopUsedRooms(int limit) {
+        List<String> results = new ArrayList<>();
+
+        String sql = "select r.room_name, count(*) as total_bookings, coalesce(sum(b.participant_count), 0) as total_participants " +
+                "from bookings b " +
+                "join rooms r on b.room_id = r.room_id " +
+                "where b.booking_status = 'approved' " +
+                "group by r.room_id, r.room_name " +
+                "order by total_bookings desc, r.room_name asc " +
+                "limit ?";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(
+                            "ten phong: " + rs.getString("room_name")
+                                    + " | so booking duoc duyet: " + rs.getInt("total_bookings")
+                                    + " | tong nguoi tham gia: " + rs.getInt("total_participants")
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi getTopUsedRooms: " + e.getMessage());
+        }
+
+        return results;
     }
 
     private Booking mapBooking(ResultSet rs) throws Exception {
@@ -377,6 +463,7 @@ public class Bookingdao implements IBookingdao {
         );
     }
 
+    @Override
     public List<Booking> getAllBookings() {
         List<Booking> bookings = new ArrayList<>();
         String sql = "select * from bookings order by start_time desc, booking_id desc";

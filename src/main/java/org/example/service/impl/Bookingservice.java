@@ -3,10 +3,7 @@ package org.example.service.impl;
 import org.example.dao.impl.Bookingdao;
 import org.example.dao.impl.Bookingdetaildao;
 import org.example.dao.impl.Userdao;
-import org.example.model.Booking;
-import org.example.model.Bookingdetail;
-import org.example.model.Room;
-import org.example.model.User;
+import org.example.model.*;
 import org.example.service.interfaces.IBookingservice;
 import org.example.util.JDBCConnection;
 
@@ -39,12 +36,14 @@ public class Bookingservice implements IBookingservice {
         return instance;
     }
 
+    @Override
     public Timestamp getCurrentVietnamTime() {
         return Timestamp.from(
                 java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toInstant()
         );
     }
 
+    @Override
     public List<Room> getAvailableRooms(Timestamp startTime, Timestamp endTime, int participantCount) {
         if (startTime == null || endTime == null) {
             System.out.println("thoi gian khong duoc de trong");
@@ -71,6 +70,7 @@ public class Bookingservice implements IBookingservice {
         return bookingdao.getAvailableRooms(startTime, endTime, participantCount);
     }
 
+    @Override
     public boolean createBooking(int userId,
                                  int roomId,
                                  String meetingTitle,
@@ -280,6 +280,7 @@ public class Bookingservice implements IBookingservice {
         }
     }
 
+    @Override
     public List<Booking> getBookingsByUser(int userId) {
         if (userId <= 0) {
             System.out.println("user id khong hop le");
@@ -288,6 +289,7 @@ public class Bookingservice implements IBookingservice {
         return bookingdao.getBookingsByUser(userId);
     }
 
+    @Override
     public boolean cancelPendingBooking(int userId, int bookingId) {
         if (userId <= 0) {
             System.out.println("user id khong hop le");
@@ -306,10 +308,12 @@ public class Bookingservice implements IBookingservice {
         return result;
     }
 
+    @Override
     public List<Booking> getPendingBookings() {
         return bookingdao.getPendingBookings();
     }
 
+    @Override
     public boolean approveBooking(int bookingId) {
         if (bookingId <= 0) {
             System.out.println("booking id khong hop le");
@@ -386,6 +390,7 @@ public class Bookingservice implements IBookingservice {
         }
     }
 
+    @Override
     public boolean rejectBooking(int bookingId, String rejectReason) {
         if (bookingId <= 0) {
             System.out.println("booking id khong hop le");
@@ -442,6 +447,7 @@ public class Bookingservice implements IBookingservice {
         }
     }
 
+    @Override
     public boolean assignSupportStaff(int bookingId, int supportStaffId) {
         if (bookingId <= 0) {
             System.out.println("booking id khong hop le");
@@ -483,6 +489,7 @@ public class Bookingservice implements IBookingservice {
         return bookingdao.assignSupportStaff(bookingId, supportStaffId);
     }
 
+    @Override
     public List<Booking> getAssignedBookingsBySupport(int supportStaffId, LocalDate workDate) {
         if (supportStaffId <= 0) {
             System.out.println("support staff id khong hop le");
@@ -497,6 +504,7 @@ public class Bookingservice implements IBookingservice {
         return bookingdao.getAssignedBookingsBySupport(supportStaffId, Date.valueOf(workDate));
     }
 
+    @Override
     public boolean updatePreparationStatus(int bookingId, int supportStaffId, String preparationStatus) {
         if (bookingId <= 0 || supportStaffId <= 0) {
             System.out.println("du lieu cap nhat khong hop le");
@@ -536,7 +544,131 @@ public class Bookingservice implements IBookingservice {
         }
     }
 
+    @Override
     public List<Booking> getAllBookings() {
         return bookingdao.getAllBookings();
+    }
+
+    @Override
+    public BigDecimal getBookingServiceCost(int bookingId) {
+        if (bookingId <= 0) {
+            System.out.println("booking id khong hop le");
+            return BigDecimal.ZERO;
+        }
+
+        Booking booking = bookingdao.findBookingById(bookingId);
+        if (booking == null) {
+            System.out.println("khong tim thay booking");
+            return BigDecimal.ZERO;
+        }
+
+        return bookingdetaildao.getTotalServiceCostByBookingId(bookingId);
+    }
+
+    @Override
+    public BigDecimal getServiceRevenueByDate(LocalDate date) {
+        if (date == null) {
+            System.out.println("ngay khong hop le");
+            return BigDecimal.ZERO;
+        }
+
+        return bookingdetaildao.getServiceRevenueByDate(date);
+    }
+
+    @Override
+    public BigDecimal getServiceRevenueByMonth(int year, int month) {
+        if (year <= 0) {
+            System.out.println("nam khong hop le");
+            return BigDecimal.ZERO;
+        }
+
+        if (month < 1 || month > 12) {
+            System.out.println("thang khong hop le");
+            return BigDecimal.ZERO;
+        }
+
+        return bookingdetaildao.getServiceRevenueByMonth(year, month);
+    }
+
+    @Override
+    public int countBookingsByStatus(String bookingStatus) {
+        String status = normalizeBookingStatus(bookingStatus);
+        if (status == null) {
+            System.out.println("trang thai booking khong hop le");
+            return 0;
+        }
+
+        return bookingdao.countBookingsByStatus(status);
+    }
+
+    @Override
+    public int countBookingsInMonth(int year, int month) {
+        if (year <= 0) {
+            System.out.println("nam khong hop le");
+            return 0;
+        }
+
+        if (month < 1 || month > 12) {
+            System.out.println("thang khong hop le");
+            return 0;
+        }
+
+        return bookingdao.countBookingsInMonth(year, month);
+    }
+
+    @Override
+    public List<String> getTopUsedRooms(int limit) {
+        if (limit <= 0) {
+            System.out.println("so luong top khong hop le");
+            return Collections.emptyList();
+        }
+
+        return bookingdao.getTopUsedRooms(limit);
+    }
+
+    @Override
+    public List<String> getTopUsedServices(int limit) {
+        if (limit <= 0) {
+            System.out.println("so luong top khong hop le");
+            return Collections.emptyList();
+        }
+
+        return bookingdetaildao.getTopUsedServices(limit);
+    }
+
+    private String normalizeBookingStatus(String bookingStatus) {
+        if (bookingStatus == null || bookingStatus.trim().isEmpty()) {
+            return null;
+        }
+
+        String value = bookingStatus.trim().toLowerCase();
+        switch (value) {
+            case "pending":
+                return "pending";
+            case "approved":
+                return "approved";
+            case "rejected":
+                return "rejected";
+            case "cancelled":
+                return "cancelled";
+            default:
+                return null;
+        }
+    }
+
+    @Override
+    public List<BookingServiceCostItem> getBookingServiceCostDetails(int bookingId) {
+        if (bookingId <= 0) {
+            System.out.println("booking id khong hop le");
+            return Collections.emptyList();
+        }
+
+        Booking booking = bookingdao.findBookingById(bookingId);
+        if (booking == null) {
+            System.out.println("khong tim thay booking");
+            return Collections.emptyList();
+        }
+
+        return bookingdetaildao.getServiceCostDetailsByBookingId(bookingId);
     }
 }
