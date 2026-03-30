@@ -12,6 +12,8 @@ public class Booking {
     private Timestamp startTime;
     private Timestamp endTime;
     private String bookingStatus;
+    private Integer assignedSupportId;
+    private String preparationStatus;
     private String note;
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -22,6 +24,7 @@ public class Booking {
     public Booking(int bookingId, int userId, int roomId, String meetingTitle,
                    String meetingDescription, int participantCount,
                    Timestamp startTime, Timestamp endTime, String bookingStatus,
+                   Integer assignedSupportId, String preparationStatus,
                    String note, Timestamp createdAt, Timestamp updatedAt) {
         this.bookingId = bookingId;
         this.userId = userId;
@@ -32,9 +35,19 @@ public class Booking {
         this.startTime = startTime;
         this.endTime = endTime;
         this.bookingStatus = bookingStatus;
+        this.assignedSupportId = assignedSupportId;
+        this.preparationStatus = preparationStatus;
         this.note = note;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public Booking(int bookingId, int userId, int roomId, String meetingTitle,
+                   String meetingDescription, int participantCount,
+                   Timestamp startTime, Timestamp endTime, String bookingStatus,
+                   String note, Timestamp createdAt, Timestamp updatedAt) {
+        this(bookingId, userId, roomId, meetingTitle, meetingDescription, participantCount,
+                startTime, endTime, bookingStatus, null, null, note, createdAt, updatedAt);
     }
 
     public Booking(int userId, int roomId, String meetingTitle,
@@ -122,6 +135,22 @@ public class Booking {
 
     public void setBookingStatus(String bookingStatus) {
         this.bookingStatus = bookingStatus;
+    }
+
+    public Integer getAssignedSupportId() {
+        return assignedSupportId;
+    }
+
+    public void setAssignedSupportId(Integer assignedSupportId) {
+        this.assignedSupportId = assignedSupportId;
+    }
+
+    public String getPreparationStatus() {
+        return preparationStatus;
+    }
+
+    public void setPreparationStatus(String preparationStatus) {
+        this.preparationStatus = preparationStatus;
     }
 
     public String getNote() {

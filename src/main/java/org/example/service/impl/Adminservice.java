@@ -5,6 +5,10 @@ import org.example.dao.interfaces.IUserdao;
 import org.example.model.User;
 import org.example.service.interfaces.IAdminservice;
 import org.example.util.PasswordHash;
+import org.example.util.ValidationUtil;
+
+import java.util.Collections;
+import java.util.List;
 
 public class Adminservice implements IAdminservice {
     private static Adminservice instance;
@@ -33,6 +37,16 @@ public class Adminservice implements IAdminservice {
             return false;
         }
 
+        if (!ValidationUtil.isValidEmail(email)) {
+            System.out.println("email khong hop le");
+            return false;
+        }
+
+        if (!ValidationUtil.isValidPhone(phone)) {
+            System.out.println("so dien thoai khong hop le");
+            return false;
+        }
+
         if (password == null || password.trim().isEmpty()) {
             System.out.println("mat khau khong duoc de trong");
             return false;
@@ -43,7 +57,7 @@ public class Adminservice implements IAdminservice {
             return false;
         }
 
-        if (email != null && !email.trim().isEmpty() && userdao.findByEmail(email.trim()) != null) {
+        if (userdao.findByEmail(email.trim()) != null) {
             System.out.println("email da ton tai");
             return false;
         }
@@ -54,12 +68,17 @@ public class Adminservice implements IAdminservice {
                 username.trim(),
                 hashedPassword,
                 fullName.trim(),
-                email == null ? null : email.trim(),
-                phone == null ? null : phone.trim(),
+                email.trim(),
+                phone.trim(),
                 "support",
                 "active"
         );
 
         return userdao.createUser(user);
+    }
+
+    public List<User> getSupportStaffs() {
+        List<User> users = userdao.getUsersByRole("support");
+        return users == null ? Collections.emptyList() : users;
     }
 }

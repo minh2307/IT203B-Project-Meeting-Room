@@ -5,8 +5,6 @@ import org.example.service.impl.Authservice;
 import org.example.service.interfaces.IAuthservice;
 
 import java.util.Scanner;
-import java.io.IOException;
-import java.io.Console;
 
 public class AuthMenu {
     private final Scanner scanner = new Scanner(System.in);
@@ -39,7 +37,7 @@ public class AuthMenu {
     }
 
     private void registerEmployee() {
-        System.out.println("\n====Dang ky emloyee ====");
+        System.out.println("\n===== dang ky employee =====");
         System.out.print("nhap username: ");
         String username = scanner.nextLine();
 
@@ -90,11 +88,10 @@ public class AuthMenu {
             EmployeeMenu employeeMenu = new EmployeeMenu(user);
             employeeMenu.showEmployeeMenu();
         } else if ("support".equalsIgnoreCase(user.getRole())) {
-            System.out.println("menu support se lam o ngay sau");
+            SupportMenu supportMenu = new SupportMenu(user);
+            supportMenu.showSupportMenu();
         } else {
             System.out.println("vai tro khong hop le");
         }
     }
-
-
 }

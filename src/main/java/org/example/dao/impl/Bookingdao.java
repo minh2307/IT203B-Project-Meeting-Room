@@ -6,6 +6,7 @@ import org.example.model.Room;
 import org.example.util.JDBCConnection;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -42,7 +43,7 @@ public class Bookingdao implements IBookingdao {
                 ") " +
                 "order by r.room_id";
 
-        try (Connection conn = JDBCConnection.getInstance().getConnection();
+        try (Connection conn = JDBCConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, participantCount);
@@ -88,8 +89,8 @@ public class Bookingdao implements IBookingdao {
 
     @Override
     public int addBooking(Connection conn, Booking booking) {
-        String sql = "insert into bookings(user_id, room_id, meeting_title, meeting_description, participant_count, start_time, end_time, booking_status, note) " +
-                "values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into bookings(user_id, room_id, meeting_title, meeting_description, participant_count, start_time, end_time, booking_status, assigned_support_id, preparation_status, note) " +
+                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, booking.getUserId());
@@ -100,7 +101,15 @@ public class Bookingdao implements IBookingdao {
             ps.setTimestamp(6, booking.getStartTime());
             ps.setTimestamp(7, booking.getEndTime());
             ps.setString(8, booking.getBookingStatus());
-            ps.setString(9, booking.getNote());
+
+            if (booking.getAssignedSupportId() == null) {
+                ps.setNull(9, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(9, booking.getAssignedSupportId());
+            }
+
+            ps.setString(10, booking.getPreparationStatus());
+            ps.setString(11, booking.getNote());
 
             int rows = ps.executeUpdate();
             if (rows > 0) {
@@ -137,11 +146,167 @@ public class Bookingdao implements IBookingdao {
         return null;
     }
 
+    public Booking findBookingById(int bookingId) {
+        String sql = "select * from bookings where booking_id = ?";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, bookingId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapBooking(rs);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi findBookingById: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    public List<Booking> getPendingBookings() {
+        List<Booking> bookings = new ArrayList<>();
+        String sql = "select * from bookings where booking_status = 'pending' order by start_time asc, booking_id asc";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                bookings.add(mapBooking(rs));
+            }
+        } catch (Exception e) {
+            System.out.println("loi getPendingBookings: " + e.getMessage());
+        }
+
+        return bookings;
+    }
+
+    public boolean hasApprovedConflict(Connection conn, int bookingId, int roomId, Timestamp startTime, Timestamp endTime) {
+        String sql = "select count(*) from bookings " +
+                "where booking_id <> ? " +
+                "and room_id = ? " +
+                "and booking_status = 'approved' " +
+                "and start_time < ? " +
+                "and end_time > ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, bookingId);
+            ps.setInt(2, roomId);
+            ps.setTimestamp(3, endTime);
+            ps.setTimestamp(4, startTime);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi hasApprovedConflict: " + e.getMessage());
+        }
+
+        return true;
+    }
+
+    public boolean updateBookingStatus(Connection conn, int bookingId, String bookingStatus, String noteAppend) {
+        String sql = "update bookings " +
+                "set booking_status = ?, " +
+                "note = case " +
+                "           when ? is null or trim(?) = '' then note " +
+                "           when note is null or trim(note) = '' then ? " +
+                "           else concat(note, ' | ', ?) " +
+                "       end, " +
+                "updated_at = current_timestamp " +
+                "where booking_id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, bookingStatus);
+            ps.setString(2, noteAppend);
+            ps.setString(3, noteAppend);
+            ps.setString(4, noteAppend);
+            ps.setString(5, noteAppend);
+            ps.setInt(6, bookingId);
+
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.out.println("loi updateBookingStatus: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public boolean assignSupportStaff(int bookingId, int supportStaffId) {
+        String sql = "update bookings set assigned_support_id = ?, " +
+                "preparation_status = coalesce(preparation_status, 'preparing'), " +
+                "updated_at = current_timestamp " +
+                "where booking_id = ? and booking_status = 'approved'";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, supportStaffId);
+            ps.setInt(2, bookingId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.out.println("loi assignSupportStaff: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public List<Booking> getAssignedBookingsBySupport(int supportStaffId, Date workDate) {
+        List<Booking> bookings = new ArrayList<>();
+        String sql = "select * from bookings " +
+                "where assigned_support_id = ? " +
+                "and booking_status = 'approved' " +
+                "and date(start_time) = ? " +
+                "and end_time >= current_timestamp " +
+                "order by start_time asc, booking_id asc";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, supportStaffId);
+            ps.setDate(2, workDate);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    bookings.add(mapBooking(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi getAssignedBookingsBySupport: " + e.getMessage());
+        }
+
+        return bookings;
+    }
+
+    public boolean updatePreparationStatus(int bookingId, int supportStaffId, String preparationStatus) {
+        String sql = "update bookings set preparation_status = ?, updated_at = current_timestamp " +
+                "where booking_id = ? and assigned_support_id = ? and booking_status = 'approved'";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, preparationStatus);
+            ps.setInt(2, bookingId);
+            ps.setInt(3, supportStaffId);
+
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.out.println("loi updatePreparationStatus: " + e.getMessage());
+        }
+
+        return false;
+    }
+
     public List<Booking> getBookingsByUser(int userId) {
         List<Booking> bookings = new ArrayList<>();
         String sql = "select * from bookings where user_id = ? order by start_time desc, booking_id desc";
 
-        try (Connection conn = JDBCConnection.getInstance().getConnection();
+        try (Connection conn = JDBCConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, userId);
@@ -162,7 +327,7 @@ public class Bookingdao implements IBookingdao {
         String sql = "update bookings set booking_status = 'cancelled', updated_at = current_timestamp " +
                 "where booking_id = ? and user_id = ? and booking_status = 'pending'";
 
-        try (Connection conn = JDBCConnection.getInstance().getConnection();
+        try (Connection conn = JDBCConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, bookingId);
@@ -177,6 +342,10 @@ public class Bookingdao implements IBookingdao {
     }
 
     private Booking mapBooking(ResultSet rs) throws Exception {
+        Integer assignedSupportId = rs.getObject("assigned_support_id") == null
+                ? null
+                : rs.getInt("assigned_support_id");
+
         return new Booking(
                 rs.getInt("booking_id"),
                 rs.getInt("user_id"),
@@ -187,6 +356,8 @@ public class Bookingdao implements IBookingdao {
                 rs.getTimestamp("start_time"),
                 rs.getTimestamp("end_time"),
                 rs.getString("booking_status"),
+                assignedSupportId,
+                rs.getString("preparation_status"),
                 rs.getString("note"),
                 rs.getTimestamp("created_at"),
                 rs.getTimestamp("updated_at")
@@ -204,5 +375,23 @@ public class Bookingdao implements IBookingdao {
                 rs.getTimestamp("created_at"),
                 rs.getTimestamp("updated_at")
         );
+    }
+
+    public List<Booking> getAllBookings() {
+        List<Booking> bookings = new ArrayList<>();
+        String sql = "select * from bookings order by start_time desc, booking_id desc";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                bookings.add(mapBooking(rs));
+            }
+        } catch (Exception e) {
+            System.out.println("loi getAllBookings: " + e.getMessage());
+        }
+
+        return bookings;
     }
 }

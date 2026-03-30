@@ -6,6 +6,8 @@ import org.example.model.User;
 import org.example.service.interfaces.IAuthservice;
 import org.example.util.JDBCConnection;
 import org.example.util.PasswordHash;
+import org.example.util.ValidationUtil;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -37,6 +39,16 @@ public class Authservice implements IAuthservice {
             return false;
         }
 
+        if (!ValidationUtil.isValidEmail(email)) {
+            System.out.println("email khong hop le");
+            return false;
+        }
+
+        if (!ValidationUtil.isValidPhone(phone)) {
+            System.out.println("so dien thoai khong hop le");
+            return false;
+        }
+
         if (password == null || password.trim().isEmpty()) {
             System.out.println("mat khau khong duoc de trong");
             return false;
@@ -47,7 +59,7 @@ public class Authservice implements IAuthservice {
             return false;
         }
 
-        if (email != null && !email.trim().isEmpty() && userdao.findByEmail(email.trim()) != null) {
+        if (userdao.findByEmail(email.trim()) != null) {
             System.out.println("email da ton tai");
             return false;
         }
@@ -58,8 +70,8 @@ public class Authservice implements IAuthservice {
                 username.trim(),
                 hashedPassword,
                 fullName.trim(),
-                email == null ? null : email.trim(),
-                phone == null ? null : phone.trim(),
+                email.trim(),
+                phone.trim(),
                 "employee",
                 "active"
         );
@@ -142,28 +154,36 @@ public class Authservice implements IAuthservice {
             return false;
         }
 
+        if (!ValidationUtil.isValidEmail(email)) {
+            System.out.println("email khong hop le");
+            return false;
+        }
+
+        if (!ValidationUtil.isValidPhone(phone)) {
+            System.out.println("so dien thoai khong hop le");
+            return false;
+        }
+
         String checkEmailSql = "select user_id from users where email = ? and user_id <> ?";
         String updateSql = "update users set full_name = ?, email = ?, phone = ?, updated_at = current_timestamp where user_id = ?";
 
         try (Connection conn = JDBCConnection.getConnection()) {
-            if (email != null && !email.trim().isEmpty()) {
-                try (PreparedStatement checkPs = conn.prepareStatement(checkEmailSql)) {
-                    checkPs.setString(1, email.trim());
-                    checkPs.setInt(2, userId);
+            try (PreparedStatement checkPs = conn.prepareStatement(checkEmailSql)) {
+                checkPs.setString(1, email.trim());
+                checkPs.setInt(2, userId);
 
-                    try (ResultSet rs = checkPs.executeQuery()) {
-                        if (rs.next()) {
-                            System.out.println("email da duoc su dung boi tai khoan khac");
-                            return false;
-                        }
+                try (ResultSet rs = checkPs.executeQuery()) {
+                    if (rs.next()) {
+                        System.out.println("email da duoc su dung boi tai khoan khac");
+                        return false;
                     }
                 }
             }
 
             try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
                 updatePs.setString(1, fullName.trim());
-                updatePs.setString(2, email == null || email.trim().isEmpty() ? null : email.trim());
-                updatePs.setString(3, phone == null || phone.trim().isEmpty() ? null : phone.trim());
+                updatePs.setString(2, email.trim());
+                updatePs.setString(3, phone.trim());
                 updatePs.setInt(4, userId);
 
                 return updatePs.executeUpdate() > 0;

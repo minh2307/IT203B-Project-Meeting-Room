@@ -2,15 +2,19 @@ package org.example.service.impl;
 
 import org.example.dao.impl.Bookingdao;
 import org.example.dao.impl.Bookingdetaildao;
+import org.example.dao.impl.Userdao;
 import org.example.model.Booking;
 import org.example.model.Bookingdetail;
 import org.example.model.Room;
+import org.example.model.User;
 import org.example.service.interfaces.IBookingservice;
 import org.example.util.JDBCConnection;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -20,10 +24,12 @@ public class Bookingservice implements IBookingservice {
 
     private final Bookingdao bookingdao;
     private final Bookingdetaildao bookingdetaildao;
+    private final Userdao userdao;
 
     private Bookingservice() {
         this.bookingdao = Bookingdao.getInstance();
         this.bookingdetaildao = Bookingdetaildao.getInstance();
+        this.userdao = Userdao.getInstance();
     }
 
     public static Bookingservice getInstance() {
@@ -123,7 +129,7 @@ public class Bookingservice implements IBookingservice {
 
         Connection conn = null;
         try {
-            conn = JDBCConnection.getInstance().getConnection();
+            conn = JDBCConnection.getConnection();
             conn.setAutoCommit(false);
 
             Room room = bookingdao.findRoomById(conn, roomId);
@@ -199,6 +205,7 @@ public class Bookingservice implements IBookingservice {
                     "pending",
                     note == null ? "" : note.trim()
             );
+            booking.setPreparationStatus("preparing");
 
             int bookingId = bookingdao.addBooking(conn, booking);
             if (bookingId <= 0) {
@@ -297,5 +304,239 @@ public class Bookingservice implements IBookingservice {
             System.out.println("chi duoc huy booking cua chinh ban khi dang o trang thai pending");
         }
         return result;
+    }
+
+    public List<Booking> getPendingBookings() {
+        return bookingdao.getPendingBookings();
+    }
+
+    public boolean approveBooking(int bookingId) {
+        if (bookingId <= 0) {
+            System.out.println("booking id khong hop le");
+            return false;
+        }
+
+        Connection conn = null;
+        try {
+            Booking booking = bookingdao.findBookingById(bookingId);
+            if (booking == null) {
+                System.out.println("khong tim thay booking");
+                return false;
+            }
+
+            if (!"pending".equalsIgnoreCase(booking.getBookingStatus())) {
+                System.out.println("chi duyet duoc booking dang pending");
+                return false;
+            }
+
+            conn = JDBCConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            boolean conflict = bookingdao.hasApprovedConflict(
+                    conn,
+                    booking.getBookingId(),
+                    booking.getRoomId(),
+                    booking.getStartTime(),
+                    booking.getEndTime()
+            );
+
+            if (conflict) {
+                boolean rejected = bookingdao.updateBookingStatus(
+                        conn,
+                        bookingId,
+                        "rejected",
+                        "tu dong tu choi do xung dot lich khi duyet"
+                );
+                if (!rejected) {
+                    conn.rollback();
+                    return false;
+                }
+                conn.commit();
+                System.out.println("booking da bi tu choi vi xung dot lich");
+                return false;
+            }
+
+            boolean approved = bookingdao.updateBookingStatus(conn, bookingId, "approved", "booking da duoc admin duyet");
+            if (!approved) {
+                conn.rollback();
+                return false;
+            }
+
+            conn.commit();
+            return true;
+        } catch (Exception e) {
+            try {
+                if (conn != null) {
+                    conn.rollback();
+                }
+            } catch (Exception ex) {
+                System.out.println("rollback that bai: " + ex.getMessage());
+            }
+            System.out.println("loi approveBooking: " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (Exception e) {
+                System.out.println("dong connection that bai: " + e.getMessage());
+            }
+        }
+    }
+
+    public boolean rejectBooking(int bookingId, String rejectReason) {
+        if (bookingId <= 0) {
+            System.out.println("booking id khong hop le");
+            return false;
+        }
+
+        Booking booking = bookingdao.findBookingById(bookingId);
+        if (booking == null) {
+            System.out.println("khong tim thay booking");
+            return false;
+        }
+
+        if (!"pending".equalsIgnoreCase(booking.getBookingStatus())) {
+            System.out.println("chi tu choi duoc booking dang pending");
+            return false;
+        }
+
+        String note = (rejectReason == null || rejectReason.trim().isEmpty())
+                ? "booking bi tu choi"
+                : "booking bi tu choi: " + rejectReason.trim();
+
+        Connection conn = null;
+        try {
+            conn = JDBCConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            boolean rejected = bookingdao.updateBookingStatus(conn, bookingId, "rejected", note);
+            if (!rejected) {
+                conn.rollback();
+                return false;
+            }
+
+            conn.commit();
+            return true;
+        } catch (Exception e) {
+            try {
+                if (conn != null) {
+                    conn.rollback();
+                }
+            } catch (Exception ex) {
+                System.out.println("rollback that bai: " + ex.getMessage());
+            }
+            System.out.println("loi rejectBooking: " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (Exception e) {
+                System.out.println("dong connection that bai: " + e.getMessage());
+            }
+        }
+    }
+
+    public boolean assignSupportStaff(int bookingId, int supportStaffId) {
+        if (bookingId <= 0) {
+            System.out.println("booking id khong hop le");
+            return false;
+        }
+
+        if (supportStaffId <= 0) {
+            System.out.println("support staff id khong hop le");
+            return false;
+        }
+
+        Booking booking = bookingdao.findBookingById(bookingId);
+        if (booking == null) {
+            System.out.println("khong tim thay booking");
+            return false;
+        }
+
+        if (!"approved".equalsIgnoreCase(booking.getBookingStatus())) {
+            System.out.println("chi phan cong support cho booking da duyet");
+            return false;
+        }
+
+        User supportUser = userdao.findById(supportStaffId);
+        if (supportUser == null) {
+            System.out.println("khong tim thay support staff");
+            return false;
+        }
+
+        if (!"support".equalsIgnoreCase(supportUser.getRole())) {
+            System.out.println("user duoc chon khong phai support staff");
+            return false;
+        }
+
+        if (!"active".equalsIgnoreCase(supportUser.getStatus())) {
+            System.out.println("support staff dang khong hoat dong");
+            return false;
+        }
+
+        return bookingdao.assignSupportStaff(bookingId, supportStaffId);
+    }
+
+    public List<Booking> getAssignedBookingsBySupport(int supportStaffId, LocalDate workDate) {
+        if (supportStaffId <= 0) {
+            System.out.println("support staff id khong hop le");
+            return Collections.emptyList();
+        }
+
+        if (workDate == null) {
+            System.out.println("ngay lam viec khong hop le");
+            return Collections.emptyList();
+        }
+
+        return bookingdao.getAssignedBookingsBySupport(supportStaffId, Date.valueOf(workDate));
+    }
+
+    public boolean updatePreparationStatus(int bookingId, int supportStaffId, String preparationStatus) {
+        if (bookingId <= 0 || supportStaffId <= 0) {
+            System.out.println("du lieu cap nhat khong hop le");
+            return false;
+        }
+
+        String status = normalizePreparationStatus(preparationStatus);
+        if (status == null) {
+            System.out.println("trang thai chuan bi khong hop le");
+            return false;
+        }
+
+        boolean result = bookingdao.updatePreparationStatus(bookingId, supportStaffId, status);
+        if (!result) {
+            System.out.println("chi cap nhat duoc booking da duoc phan cong cho chinh ban");
+        }
+        return result;
+    }
+
+    private String normalizePreparationStatus(String preparationStatus) {
+        if (preparationStatus == null) {
+            return null;
+        }
+
+        String value = preparationStatus.trim().toLowerCase();
+        switch (value) {
+            case "preparing":
+                return "preparing";
+            case "ready":
+                return "ready";
+            case "thieu thiet bi":
+            case "thieu_thiet_bi":
+            case "missing_equipment":
+                return "missing_equipment";
+            default:
+                return null;
+        }
+    }
+
+    public List<Booking> getAllBookings() {
+        return bookingdao.getAllBookings();
     }
 }

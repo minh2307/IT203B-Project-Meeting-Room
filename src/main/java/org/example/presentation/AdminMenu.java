@@ -1,9 +1,12 @@
 package org.example.presentation;
 
+import org.example.model.Booking;
 import org.example.model.Equipment;
 import org.example.model.Room;
 import org.example.model.Service;
+import org.example.model.User;
 import org.example.service.impl.Adminservice;
+import org.example.service.impl.Bookingservice;
 import org.example.service.impl.Equipmentservice;
 import org.example.service.impl.Roomservice;
 import org.example.service.impl.Serviceservice;
@@ -13,6 +16,9 @@ import org.example.service.interfaces.IRoomservice;
 import org.example.service.interfaces.IServiceservice;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Scanner;
 
@@ -22,6 +28,7 @@ public class AdminMenu {
     private final IEquipmentservice equipmentservice = Equipmentservice.getInstance();
     private final IServiceservice serviceservice = Serviceservice.getInstance();
     private final IAdminservice adminservice = Adminservice.getInstance();
+    private final Bookingservice bookingservice = Bookingservice.getInstance();
 
     public void showAdminMenu() {
         while (true) {
@@ -30,6 +37,7 @@ public class AdminMenu {
             System.out.println("2. quan ly thiet bi di dong");
             System.out.println("3. quan ly dich vu di kem");
             System.out.println("4. tao tai khoan support");
+            System.out.println("5. duyet booking va phan cong support");
             System.out.println("0. dang xuat");
             System.out.print("chon: ");
 
@@ -47,6 +55,9 @@ public class AdminMenu {
                     break;
                 case "4":
                     createSupportStaff();
+                    break;
+                case "5":
+                    showBookingApprovalMenu();
                     break;
                 case "0":
                     System.out.println("dang xuat admin");
@@ -151,6 +162,47 @@ public class AdminMenu {
                     break;
                 case "4":
                     deleteService();
+                    break;
+                case "0":
+                    return;
+                default:
+                    System.out.println("lua chon khong hop le");
+            }
+        }
+    }
+
+    private void showBookingApprovalMenu() {
+        while (true) {
+            System.out.println("\n===== duyet booking va phan cong =====");
+            System.out.println("1. xem tat ca booking");
+            System.out.println("2. xem danh sach booking pending");
+            System.out.println("3. duyet booking");
+            System.out.println("4. tu choi booking");
+            System.out.println("5. xem danh sach support staff");
+            System.out.println("6. phan cong support staff");
+            System.out.println("0. quay lai");
+            System.out.print("chon: ");
+
+            String choice = scanner.nextLine();
+
+            switch (choice) {
+                case "1":
+                    viewAllBookings();
+                    break;
+                case "2":
+                    viewPendingBookings();
+                    break;
+                case "3":
+                    approveBooking();
+                    break;
+                case "4":
+                    rejectBooking();
+                    break;
+                case "5":
+                    viewSupportStaffs();
+                    break;
+                case "6":
+                    assignSupportStaff();
                     break;
                 case "0":
                     return;
@@ -552,6 +604,98 @@ public class AdminMenu {
         System.out.println(result ? "tao tai khoan support thanh cong" : "tao tai khoan that bai");
     }
 
+    private void viewPendingBookings() {
+        List<Booking> bookings = bookingservice.getPendingBookings();
+        if (bookings == null || bookings.isEmpty()) {
+            System.out.println("khong co booking pending nao");
+            return;
+        }
+
+        System.out.println("\n===== danh sach booking pending =====");
+        for (Booking booking : bookings) {
+            System.out.println(
+                    "id: " + booking.getBookingId()
+                            + " | room_id: " + booking.getRoomId()
+                            + " | user_id: " + booking.getUserId()
+                            + " | tieu de: " + booking.getMeetingTitle()
+                            + " | bat dau: " + formatDateTime(booking.getStartTime())
+                            + " | ket thuc: " + formatDateTime(booking.getEndTime())
+                            + " | so nguoi: " + booking.getParticipantCount()
+                            + " | trang thai: " + safe(booking.getBookingStatus())
+                            + " | ghi chu: " + safe(booking.getNote())
+            );
+        }
+    }
+
+    private void approveBooking() {
+        try {
+            viewPendingBookings();
+            System.out.print("nhap booking id muon duyet: ");
+            int bookingId = Integer.parseInt(scanner.nextLine());
+
+            boolean result = bookingservice.approveBooking(bookingId);
+            if (result) {
+                System.out.println("duyet booking thanh cong");
+            } else {
+                System.out.println("duyet booking that bai hoac booking da bi tu choi do xung dot lich");
+            }
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void rejectBooking() {
+        try {
+            viewPendingBookings();
+            System.out.print("nhap booking id muon tu choi: ");
+            int bookingId = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("nhap ly do tu choi: ");
+            String rejectReason = scanner.nextLine();
+
+            boolean result = bookingservice.rejectBooking(bookingId, rejectReason);
+            System.out.println(result ? "tu choi booking thanh cong" : "tu choi booking that bai");
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void viewSupportStaffs() {
+        List<User> supports = adminservice.getSupportStaffs();
+        if (supports == null || supports.isEmpty()) {
+            System.out.println("khong co support staff nao");
+            return;
+        }
+
+        System.out.println("\n===== danh sach support staff =====");
+        for (User user : supports) {
+            System.out.println(
+                    "id: " + user.getUserId()
+                            + " | username: " + user.getUsername()
+                            + " | ho ten: " + user.getFullName()
+                            + " | email: " + safe(user.getEmail())
+                            + " | sdt: " + safe(user.getPhone())
+                            + " | trang thai: " + safe(user.getStatus())
+            );
+        }
+    }
+
+    private void assignSupportStaff() {
+        try {
+            System.out.print("nhap booking id da duyet can phan cong: ");
+            int bookingId = Integer.parseInt(scanner.nextLine());
+
+            viewSupportStaffs();
+            System.out.print("nhap support staff id: ");
+            int supportStaffId = Integer.parseInt(scanner.nextLine());
+
+            boolean result = bookingservice.assignSupportStaff(bookingId, supportStaffId);
+            System.out.println(result ? "phan cong support staff thanh cong" : "phan cong support staff that bai");
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
     private void printRoomTable(List<Room> rooms) {
         String line = "+----+------------------------------+----------+----------------------+------------------------------+------------------+";
         System.out.println(line);
@@ -628,5 +772,42 @@ public class AdminMenu {
             return text;
         }
         return text.substring(0, maxLength - 3) + "...";
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String formatDateTime(Timestamp timestamp) {
+        if (timestamp == null) {
+            return "";
+        }
+        return timestamp.toInstant()
+                .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
+
+    private void viewAllBookings() {
+        List<Booking> bookings = bookingservice.getAllBookings();
+        if (bookings == null || bookings.isEmpty()) {
+            System.out.println("khong co booking nao");
+            return;
+        }
+
+        System.out.println("\n===== danh sach tat ca booking =====");
+        for (Booking booking : bookings) {
+            System.out.println(
+                    "id: " + booking.getBookingId()
+                            + " | user_id: " + booking.getUserId()
+                            + " | room_id: " + booking.getRoomId()
+                            + " | tieu de: " + booking.getMeetingTitle()
+                            + " | bat dau: " + formatDateTime(booking.getStartTime())
+                            + " | ket thuc: " + formatDateTime(booking.getEndTime())
+                            + " | duyet: " + safe(booking.getBookingStatus())
+                            + " | support_id: " + (booking.getAssignedSupportId() == null ? "" : booking.getAssignedSupportId())
+                            + " | chuan bi: " + safe(booking.getPreparationStatus())
+                            + " | ghi chu: " + safe(booking.getNote())
+            );
+        }
     }
 }
