@@ -2,13 +2,17 @@ package org.example.presentation;
 
 import org.example.model.Equipment;
 import org.example.model.Room;
+import org.example.model.Service;
 import org.example.service.impl.Adminservice;
 import org.example.service.impl.Equipmentservice;
 import org.example.service.impl.Roomservice;
+import org.example.service.impl.Serviceservice;
 import org.example.service.interfaces.IAdminservice;
 import org.example.service.interfaces.IEquipmentservice;
 import org.example.service.interfaces.IRoomservice;
+import org.example.service.interfaces.IServiceservice;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Scanner;
 
@@ -16,6 +20,7 @@ public class AdminMenu {
     private final Scanner scanner = new Scanner(System.in);
     private final IRoomservice roomservice = Roomservice.getInstance();
     private final IEquipmentservice equipmentservice = Equipmentservice.getInstance();
+    private final IServiceservice serviceservice = Serviceservice.getInstance();
     private final IAdminservice adminservice = Adminservice.getInstance();
 
     public void showAdminMenu() {
@@ -23,7 +28,8 @@ public class AdminMenu {
             System.out.println("\n===== menu admin =====");
             System.out.println("1. quan ly phong hop");
             System.out.println("2. quan ly thiet bi di dong");
-            System.out.println("3. tao tai khoan support");
+            System.out.println("3. quan ly dich vu di kem");
+            System.out.println("4. tao tai khoan support");
             System.out.println("0. dang xuat");
             System.out.print("chon: ");
 
@@ -37,6 +43,9 @@ public class AdminMenu {
                     showEquipmentManagementMenu();
                     break;
                 case "3":
+                    showServiceManagementMenu();
+                    break;
+                case "4":
                     createSupportStaff();
                     break;
                 case "0":
@@ -109,6 +118,39 @@ public class AdminMenu {
                     break;
                 case "4":
                     deleteEquipment();
+                    break;
+                case "0":
+                    return;
+                default:
+                    System.out.println("lua chon khong hop le");
+            }
+        }
+    }
+
+    private void showServiceManagementMenu() {
+        while (true) {
+            System.out.println("\n===== quan ly dich vu di kem =====");
+            System.out.println("1. hien thi danh sach dich vu");
+            System.out.println("2. them dich vu");
+            System.out.println("3. sua dich vu");
+            System.out.println("4. xoa dich vu");
+            System.out.println("0. quay lai");
+            System.out.print("chon: ");
+
+            String choice = scanner.nextLine();
+
+            switch (choice) {
+                case "1":
+                    viewServices();
+                    break;
+                case "2":
+                    addService();
+                    break;
+                case "3":
+                    updateService();
+                    break;
+                case "4":
+                    deleteService();
                     break;
                 case "0":
                     return;
@@ -376,6 +418,120 @@ public class AdminMenu {
         printEquipmentTable(equipments);
     }
 
+    private void addService() {
+        try {
+            System.out.print("nhap ten dich vu: ");
+            String serviceName = scanner.nextLine();
+
+            System.out.print("nhap don gia: ");
+            BigDecimal unitPrice = new BigDecimal(scanner.nextLine().trim());
+
+            System.out.print("nhap don vi tinh: ");
+            String unit = scanner.nextLine();
+
+            System.out.print("nhap mo ta: ");
+            String description = scanner.nextLine();
+
+            System.out.print("nhap trang thai (active/inactive): ");
+            String status = scanner.nextLine();
+
+            boolean result = serviceservice.addService(serviceName, unitPrice, unit, description, status);
+            System.out.println(result ? "them dich vu thanh cong" : "them dich vu that bai");
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void updateService() {
+        try {
+            System.out.print("nhap id dich vu can sua: ");
+            int serviceId = Integer.parseInt(scanner.nextLine());
+
+            Service oldService = serviceservice.findById(serviceId);
+            if (oldService == null) {
+                System.out.println("khong tim thay dich vu");
+                return;
+            }
+
+            System.out.println("\n===== thong tin dich vu cu =====");
+            printServiceTable(List.of(oldService));
+
+            System.out.print("nhap ten dich vu moi (enter de giu nguyen): ");
+            String serviceName = scanner.nextLine().trim();
+            if (serviceName.isEmpty()) {
+                serviceName = oldService.getServiceName();
+            }
+
+            System.out.print("nhap don gia moi (enter de giu nguyen): ");
+            String priceInput = scanner.nextLine().trim();
+            BigDecimal unitPrice = priceInput.isEmpty() ? oldService.getUnitPrice() : new BigDecimal(priceInput);
+
+            System.out.print("nhap don vi tinh moi (enter de giu nguyen): ");
+            String unit = scanner.nextLine().trim();
+            if (unit.isEmpty()) {
+                unit = oldService.getUnit();
+            }
+
+            System.out.print("nhap mo ta moi (enter de giu nguyen): ");
+            String description = scanner.nextLine().trim();
+            if (description.isEmpty()) {
+                description = oldService.getDescription();
+            }
+
+            System.out.print("nhap trang thai moi (active/inactive, enter de giu nguyen): ");
+            String status = scanner.nextLine().trim();
+            if (status.isEmpty()) {
+                status = oldService.getStatus();
+            }
+
+            boolean result = serviceservice.updateService(serviceId, serviceName, unitPrice, unit, description, status);
+            System.out.println(result ? "sua dich vu thanh cong" : "sua dich vu that bai");
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void deleteService() {
+        try {
+            System.out.print("nhap id dich vu can xoa: ");
+            int serviceId = Integer.parseInt(scanner.nextLine());
+
+            Service service = serviceservice.findById(serviceId);
+            if (service == null) {
+                System.out.println("khong tim thay dich vu");
+                return;
+            }
+
+            System.out.println("\n===== dich vu sap xoa =====");
+            printServiceTable(List.of(service));
+
+            System.out.print("ban co chac chan muon xoa dich vu nay khong? (y/n): ");
+            String confirm = scanner.nextLine().trim();
+
+            if (!"y".equalsIgnoreCase(confirm)) {
+                System.out.println("da huy thao tac xoa");
+                return;
+            }
+
+            boolean result = serviceservice.deleteService(serviceId);
+            System.out.println(result ? "xoa dich vu thanh cong" : "xoa dich vu that bai");
+        } catch (Exception e) {
+            System.out.println("du lieu khong hop le");
+        }
+    }
+
+    private void viewServices() {
+        List<Service> services = serviceservice.getAllServices();
+
+        if (services == null || services.isEmpty()) {
+            System.out.println("khong co dich vu nao");
+            return;
+        }
+
+        System.out.println("\n===== danh sach dich vu =====");
+        printServiceTable(services);
+    }
+
     private void createSupportStaff() {
         System.out.print("nhap username: ");
         String username = scanner.nextLine();
@@ -431,6 +587,26 @@ public class AdminMenu {
                     equipment.getQuantity(),
                     getAvailableText(equipment),
                     safeText(equipment.getStatus(), 16));
+        }
+
+        System.out.println(line);
+    }
+
+    private void printServiceTable(List<Service> services) {
+        String line = "+----+------------------------------+--------------+--------------+------------------------------+------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-28s | %-12s | %-12s | %-28s | %-16s |%n",
+                "id", "ten dich vu", "don gia", "don vi", "mo ta", "trang thai");
+        System.out.println(line);
+
+        for (Service service : services) {
+            System.out.printf("| %-2d | %-28s | %-12s | %-12s | %-28s | %-16s |%n",
+                    service.getServiceId(),
+                    safeText(service.getServiceName(), 28),
+                    service.getUnitPrice() == null ? "0" : service.getUnitPrice().toPlainString(),
+                    safeText(service.getUnit(), 12),
+                    safeText(service.getDescription(), 28),
+                    safeText(service.getStatus(), 16));
         }
 
         System.out.println(line);

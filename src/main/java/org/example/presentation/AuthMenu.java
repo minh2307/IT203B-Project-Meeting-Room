@@ -52,7 +52,7 @@ public class AuthMenu {
         System.out.print("nhap so dien thoai: ");
         String phone = scanner.nextLine();
 
-        System.out.println("nhap mat khau: ");
+        System.out.print("nhap mat khau: ");
         String password = scanner.nextLine();
 
         boolean result = authservice.registerEmployee(username, fullName, email, phone, password);
@@ -69,7 +69,7 @@ public class AuthMenu {
         System.out.print("nhap username: ");
         String username = scanner.nextLine();
 
-        System.out.println("nhap mat khau: ");
+        System.out.print("nhap mat khau: ");
         String password = scanner.nextLine();
 
         User user = authservice.login(username, password);
