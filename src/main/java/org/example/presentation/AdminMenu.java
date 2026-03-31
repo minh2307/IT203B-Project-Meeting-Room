@@ -723,12 +723,18 @@ public class AdminMenu {
 
     private void viewServiceRevenueByDate() {
         try {
-            System.out.print("nhap ngay can thong ke (dd/MM/yyyy): ");
-            String input = scanner.nextLine().trim();
-            LocalDate date = LocalDate.parse(input, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            System.out.print("nhap ngay booking can cap nhat (dd/MM/yyyy, enter = hom nay): ");
+            String inputDate = scanner.nextLine().trim();
 
-            BigDecimal revenue = bookingservice.getServiceRevenueByDate(date);
-            System.out.println("doanh thu dich vu ngay " + input + " = " + revenue.toPlainString());
+            LocalDate workDate;
+            if (inputDate.isEmpty()) {
+                workDate = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+            } else {
+                workDate = LocalDate.parse(inputDate, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            }
+
+            BigDecimal revenue = bookingservice.getServiceRevenueByDate(workDate);
+            System.out.println("doanh thu dich vu ngay " + inputDate + " = " + revenue.toPlainString());
         } catch (Exception e) {
             System.out.println("ngay nhap vao khong hop le");
         }
