@@ -90,17 +90,7 @@ public class EmployeeMenu {
 
             System.out.println("\n===== danh sach phong trong =====");
             System.out.println("thoi gian tim kiem: " + formatTimestampVN(startTime) + " -> " + formatTimestampVN(endTime));
-
-            for (Room room : rooms) {
-                System.out.println(
-                        "id: " + room.getRoomId()
-                                + " | ten phong: " + room.getRoomName()
-                                + " | suc chua: " + room.getCapacity()
-                                + " | vi tri: " + room.getLocation()
-                                + " | mo ta: " + room.getDescription()
-                                + " | trang thai: " + room.getStatus()
-                );
-            }
+            printRoomTable(rooms);
         } catch (Exception e) {
             System.out.println("du lieu thoi gian hoac so nguoi khong hop le");
         }
@@ -128,15 +118,7 @@ public class EmployeeMenu {
 
             System.out.println("\n===== phong trong =====");
             System.out.println("khung gio dat: " + formatTimestampVN(startTime) + " -> " + formatTimestampVN(endTime));
-
-            for (Room room : rooms) {
-                System.out.println(
-                        "id: " + room.getRoomId()
-                                + " | ten phong: " + room.getRoomName()
-                                + " | suc chua: " + room.getCapacity()
-                                + " | vi tri: " + room.getLocation()
-                );
-            }
+            printRoomTable(rooms);
 
             System.out.print("chon id phong muon dat: ");
             int roomId = Integer.parseInt(scanner.nextLine());
@@ -187,15 +169,7 @@ public class EmployeeMenu {
         }
 
         System.out.println("\n===== danh sach thiet bi =====");
-        for (Equipment equipment : equipments) {
-            System.out.println(
-                    "id: " + equipment.getEquipmentId()
-                            + " | ten thiet bi: " + equipment.getEquipmentName()
-                            + " | loai: " + equipment.getEquipmentType()
-                            + " | so luong: " + equipment.getQuantity()
-                            + " | trang thai: " + equipment.getStatus()
-            );
-        }
+        printEquipmentTable(equipments);
 
         while (true) {
             System.out.print("nhap id thiet bi (0 de dung): ");
@@ -238,15 +212,7 @@ public class EmployeeMenu {
         }
 
         System.out.println("\n===== danh sach dich vu =====");
-        for (Service service : services) {
-            System.out.println(
-                    "id: " + service.getServiceId()
-                            + " | ten dich vu: " + service.getServiceName()
-                            + " | don gia: " + (service.getUnitPrice() == null ? "0" : service.getUnitPrice().toPlainString())
-                            + " | don vi: " + service.getUnit()
-                            + " | trang thai: " + service.getStatus()
-            );
-        }
+        printServiceTable(services);
 
         while (true) {
             System.out.print("nhap id dich vu (0 de dung): ");
@@ -281,18 +247,7 @@ public class EmployeeMenu {
         }
 
         System.out.println("\n===== booking cua toi =====");
-        for (Booking booking : bookings) {
-            System.out.println(
-                    "id: " + booking.getBookingId()
-                            + " | room_id: " + booking.getRoomId()
-                            + " | tieu de: " + booking.getMeetingTitle()
-                            + " | start: " + formatTimestampVN(booking.getStartTime())
-                            + " | end: " + formatTimestampVN(booking.getEndTime())
-                            + " | so nguoi: " + booking.getParticipantCount()
-                            + " | trang thai duyet: " + booking.getBookingStatus()
-                            + " | ghi chu: " + safe(booking.getNote())
-            );
-        }
+        printMyBookingTable(bookings);
     }
 
     private void cancelPendingBooking() {
@@ -395,5 +350,96 @@ public class EmployeeMenu {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private void printRoomTable(List<Room> rooms) {
+        String line = "+----+------------------------------+----------+----------------------+------------------------------+------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-28s | %-8s | %-20s | %-28s | %-16s |%n",
+                "id", "ten phong", "suc chua", "vi tri", "mo ta", "trang thai");
+        System.out.println(line);
+
+        for (Room room : rooms) {
+            System.out.printf("| %-2d | %-28s | %-8d | %-20s | %-28s | %-16s |%n",
+                    room.getRoomId(),
+                    safeText(room.getRoomName(), 28),
+                    room.getCapacity(),
+                    safeText(room.getLocation(), 20),
+                    safeText(room.getDescription(), 28),
+                    safeText(room.getStatus(), 16));
+        }
+
+        System.out.println(line);
+    }
+
+    private void printEquipmentTable(List<Equipment> equipments) {
+        String line = "+----+------------------------------+--------------+----------+------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-28s | %-12s | %-8s | %-16s |%n",
+                "id", "ten thiet bi", "loai", "so luong", "trang thai");
+        System.out.println(line);
+
+        for (Equipment equipment : equipments) {
+            System.out.printf("| %-2d | %-28s | %-12s | %-8d | %-16s |%n",
+                    equipment.getEquipmentId(),
+                    safeText(equipment.getEquipmentName(), 28),
+                    safeText(equipment.getEquipmentType(), 12),
+                    equipment.getQuantity(),
+                    safeText(equipment.getStatus(), 16));
+        }
+
+        System.out.println(line);
+    }
+
+    private void printServiceTable(List<Service> services) {
+        String line = "+----+------------------------------+--------------+------------+------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-28s | %-12s | %-10s | %-16s |%n",
+                "id", "ten dich vu", "don gia", "don vi", "trang thai");
+        System.out.println(line);
+
+        for (Service service : services) {
+            System.out.printf("| %-2d | %-28s | %-12s | %-10s | %-16s |%n",
+                    service.getServiceId(),
+                    safeText(service.getServiceName(), 28),
+                    service.getUnitPrice() == null ? "0" : service.getUnitPrice().toPlainString(),
+                    safeText(service.getUnit(), 10),
+                    safeText(service.getStatus(), 16));
+        }
+
+        System.out.println(line);
+    }
+
+    private void printMyBookingTable(List<Booking> bookings) {
+        String line = "+----+---------+-------------------------+------------------+------------------+----------+------------+----------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-7s | %-23s | %-16s | %-16s | %-8s | %-10s | %-20s |%n",
+                "id", "room_id", "tieu de", "bat dau", "ket thuc", "so nguoi", "duyet", "ghi chu");
+        System.out.println(line);
+
+        for (Booking booking : bookings) {
+            System.out.printf("| %-2d | %-7d | %-23s | %-16s | %-16s | %-8d | %-10s | %-20s |%n",
+                    booking.getBookingId(),
+                    booking.getRoomId(),
+                    safeText(booking.getMeetingTitle(), 23),
+                    formatTimestampVN(booking.getStartTime()),
+                    formatTimestampVN(booking.getEndTime()),
+                    booking.getParticipantCount(),
+                    safeText(safe(booking.getBookingStatus()), 10),
+                    safeText(safe(booking.getNote()), 20));
+        }
+
+        System.out.println(line);
+    }
+
+    private String safeText(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        text = text.trim();
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength - 3) + "...";
     }
 }

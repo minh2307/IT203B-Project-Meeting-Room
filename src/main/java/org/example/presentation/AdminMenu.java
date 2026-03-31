@@ -658,19 +658,7 @@ public class AdminMenu {
         }
 
         System.out.println("\n===== danh sach booking pending =====");
-        for (Booking booking : bookings) {
-            System.out.println(
-                    "id: " + booking.getBookingId()
-                            + " | room_id: " + booking.getRoomId()
-                            + " | user_id: " + booking.getUserId()
-                            + " | tieu de: " + booking.getMeetingTitle()
-                            + " | bat dau: " + formatDateTime(booking.getStartTime())
-                            + " | ket thuc: " + formatDateTime(booking.getEndTime())
-                            + " | so nguoi: " + booking.getParticipantCount()
-                            + " | trang thai: " + safe(booking.getBookingStatus())
-                            + " | ghi chu: " + safe(booking.getNote())
-            );
-        }
+        printPendingBookingTable(bookings);
     }
 
     private void approveBooking() {
@@ -714,16 +702,7 @@ public class AdminMenu {
         }
 
         System.out.println("\n===== danh sach support staff =====");
-        for (User user : supports) {
-            System.out.println(
-                    "id: " + user.getUserId()
-                            + " | username: " + user.getUsername()
-                            + " | ho ten: " + user.getFullName()
-                            + " | email: " + safe(user.getEmail())
-                            + " | sdt: " + safe(user.getPhone())
-                            + " | trang thai: " + safe(user.getStatus())
-            );
-        }
+        printSupportStaffTable(supports);
     }
 
     private void assignSupportStaff() {
@@ -941,20 +920,7 @@ public class AdminMenu {
         }
 
         System.out.println("\n===== danh sach tat ca booking =====");
-        for (Booking booking : bookings) {
-            System.out.println(
-                    "id: " + booking.getBookingId()
-                            + " | user_id: " + booking.getUserId()
-                            + " | room_id: " + booking.getRoomId()
-                            + " | tieu de: " + booking.getMeetingTitle()
-                            + " | bat dau: " + formatDateTime(booking.getStartTime())
-                            + " | ket thuc: " + formatDateTime(booking.getEndTime())
-                            + " | duyet: " + safe(booking.getBookingStatus())
-                            + " | support_id: " + (booking.getAssignedSupportId() == null ? "" : booking.getAssignedSupportId())
-                            + " | chuan bi: " + safe(booking.getPreparationStatus())
-                            + " | ghi chu: " + safe(booking.getNote())
-            );
-        }
+        printAllBookingTable(bookings);
     }
 
     private void viewBookingServiceCost() {
@@ -1000,5 +966,88 @@ public class AdminMenu {
         System.out.println(line);
     }
 
+    private void printPendingBookingTable(List<Booking> bookings) {
+        String line = "+----+---------+---------+-------------------------+------------------+------------------+----------+------------+----------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-7s | %-7s | %-23s | %-16s | %-16s | %-8s | %-10s | %-20s |%n",
+                "id", "user_id", "room_id", "tieu de", "bat dau", "ket thuc", "so nguoi", "trang thai", "ghi chu");
+        System.out.println(line);
+
+        for (Booking booking : bookings) {
+            System.out.printf("| %-2d | %-7d | %-7d | %-23s | %-16s | %-16s | %-8d | %-10s | %-20s |%n",
+                    booking.getBookingId(),
+                    booking.getUserId(),
+                    booking.getRoomId(),
+                    safeText(booking.getMeetingTitle(), 23),
+                    formatDateTime(booking.getStartTime()),
+                    formatDateTime(booking.getEndTime()),
+                    booking.getParticipantCount(),
+                    safeText(safe(booking.getBookingStatus()), 10),
+                    safeText(safe(booking.getNote()), 20));
+        }
+
+        System.out.println(line);
+    }
+
+    private void printSupportStaffTable(List<User> supports) {
+        String line = "+----+----------------+-------------------------+-------------------------+--------------+------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-14s | %-23s | %-23s | %-12s | %-16s |%n",
+                "id", "username", "ho ten", "email", "sdt", "trang thai");
+        System.out.println(line);
+
+        for (User user : supports) {
+            System.out.printf("| %-2d | %-14s | %-23s | %-23s | %-12s | %-16s |%n",
+                    user.getUserId(),
+                    safeText(user.getUsername(), 14),
+                    safeText(user.getFullName(), 23),
+                    safeText(safe(user.getEmail()), 23),
+                    safeText(safe(user.getPhone()), 12),
+                    safeText(safe(user.getStatus()), 16));
+        }
+
+        System.out.println(line);
+    }
+
+    private void printAllBookingTable(List<Booking> bookings) {
+        String line = "+----+---------+---------+--------------------+------------------+------------------+------------+------------+------------------+------------------+";
+        System.out.println(line);
+        System.out.printf("| %-2s | %-7s | %-7s | %-18s | %-16s | %-16s | %-10s | %-10s | %-16s | %-16s |%n",
+                "id", "user_id", "room_id", "tieu de", "bat dau", "ket thuc", "duyet", "support_id", "chuan bi", "ghi chu");
+        System.out.println(line);
+
+        for (Booking booking : bookings) {
+            System.out.printf("| %-2d | %-7d | %-7d | %-18s | %-16s | %-16s | %-10s | %-10s | %-16s | %-16s |%n",
+                    booking.getBookingId(),
+                    booking.getUserId(),
+                    booking.getRoomId(),
+                    safeText(booking.getMeetingTitle(), 18),
+                    formatDateTime(booking.getStartTime()),
+                    formatDateTime(booking.getEndTime()),
+                    safeText(safe(booking.getBookingStatus()), 10),
+                    booking.getAssignedSupportId() == null ? "" : booking.getAssignedSupportId().toString(),
+                    safeText(formatPreparationStatus(booking.getPreparationStatus()), 16),
+                    safeText(safe(booking.getNote()), 16));
+        }
+
+        System.out.println(line);
+    }
+
+    private String formatPreparationStatus(String status) {
+        if (status == null || status.trim().isEmpty()) {
+            return "";
+        }
+
+        switch (status.trim().toLowerCase()) {
+            case "preparing":
+                return "dang chuan bi";
+            case "ready":
+                return "san sang";
+            case "missing_equipment":
+                return "thieu thiet bi";
+            default:
+                return status;
+        }
+    }
 
 }

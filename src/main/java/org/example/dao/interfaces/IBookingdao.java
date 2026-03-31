@@ -29,6 +29,8 @@ public interface IBookingdao {
 
     List<Booking> getAssignedBookingsBySupport(int supportStaffId, Date workDate);
 
+    List<Booking> getAllAssignedBookingsBySupport(int supportStaffId);
+
     boolean updatePreparationStatus(int bookingId, int supportStaffId, String preparationStatus);
 
     List<Booking> getBookingsByUser(int userId);

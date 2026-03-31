@@ -268,8 +268,7 @@ public class Bookingdao implements IBookingdao {
         String sql = "select * from bookings " +
                 "where assigned_support_id = ? " +
                 "and booking_status = 'approved' " +
-                "and date(start_time) = ? " +
-                "and end_time >= current_timestamp " +
+                "and date(start_time) >= ? " +
                 "order by start_time asc, booking_id asc";
 
         try (Connection conn = JDBCConnection.getConnection();
@@ -285,6 +284,31 @@ public class Bookingdao implements IBookingdao {
             }
         } catch (Exception e) {
             System.out.println("loi getAssignedBookingsBySupport: " + e.getMessage());
+        }
+
+        return bookings;
+    }
+
+    @Override
+    public List<Booking> getAllAssignedBookingsBySupport(int supportStaffId) {
+        List<Booking> bookings = new ArrayList<>();
+        String sql = "select * from bookings " +
+                "where assigned_support_id = ? " +
+                "and booking_status = 'approved' " +
+                "order by start_time asc, booking_id asc";
+
+        try (Connection conn = JDBCConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, supportStaffId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    bookings.add(mapBooking(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("loi getAllAssignedBookingsBySupport: " + e.getMessage());
         }
 
         return bookings;

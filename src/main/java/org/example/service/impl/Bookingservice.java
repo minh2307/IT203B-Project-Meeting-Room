@@ -671,4 +671,15 @@ public class Bookingservice implements IBookingservice {
 
         return bookingdetaildao.getServiceCostDetailsByBookingId(bookingId);
     }
+
+    @Override
+    public List<Booking> getAllAssignedBookingsBySupport(int supportStaffId) {
+        if (supportStaffId <= 0) {
+            System.out.println("support staff id khong hop le");
+            return Collections.emptyList();
+        }
+
+        return bookingdao.getAllAssignedBookingsBySupport(supportStaffId);
+    }
+
 }

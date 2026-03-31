@@ -59,4 +59,6 @@ public interface IBookingservice {
     List<String> getTopUsedRooms(int limit);
 
     List<String> getTopUsedServices(int limit);
+
+    List<Booking> getAllAssignedBookingsBySupport(int supportStaffId);
 }
